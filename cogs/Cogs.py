@@ -1,0 +1,171 @@
+import io
+from disnake.ext.commands.errors import ExtensionAlreadyLoaded, NoPrivateMessage
+from core.bot import Shashank
+import sqlite3
+import disnake
+from disnake.ext import commands
+import json
+import textwrap
+import traceback
+from contextlib import redirect_stdout
+
+SQLITE_FILE_NAME="json.sqlite"
+
+class Cogs(commands.Cog):
+  def __init__(self, bot: Shashank):
+    self.bot: Shashank = bot
+    con = sqlite3.connect(SQLITE_FILE_NAME)
+    con.execute(f'CREATE TABLE IF NOT EXISTS COGS (ID text, path text)')
+    cogs = con.execute(f"SELECT * FROM COGS").fetchall() or []
+    con.close()
+    for cog_dict in cogs:
+      try:
+        bot.load_extension(cog_dict[1])
+      except ExtensionAlreadyLoaded:
+        pass
+
+  @commands.command(name='eval', hidden=True)
+  @commands.is_owner()
+  async def _eval(self, ctx: commands.Context, *, body: str):
+    """Evaluates a code."""
+
+    env = {
+      'bot': self.bot,
+      'ctx': ctx,
+      'channel': ctx.channel,
+      'author': ctx.author,
+      'guild': ctx.guild,
+      'message': ctx.message
+    }
+
+    env.update(globals())
+    body=self.cleanup_code(body)
+
+    stdout = io.StringIO()
+
+    to_compile = f'async def func():\n{textwrap.indent(body, "  ")}'
+    try:
+      exec(to_compile, env)
+    except Exception as e:
+      return await ctx.send(f'```py\n{e.__class__.__name__}: {e}\n```')
+
+    func = env['func']
+    try:
+      with redirect_stdout(stdout):
+        ret = await func()
+    except Exception as e:
+      value = stdout.getvalue()
+      await ctx.send(f'```py\n{value}{traceback.format_exc()}\n```')
+    else:
+      value = stdout.getvalue()
+      try:
+        await ctx.message.add_reaction('\u2705')
+      except Exception:
+        pass
+
+      if ret is None:
+        if value:
+          await ctx.send(f'```py\n{value}\n```')
+      else:
+        await ctx.send(f'```py\n{value}{ret}\n```')
+
+  def cleanup_code(self, content):
+      """Automatically removes code blocks from the code."""
+      # remove ```py\n```
+      if content.startswith('```') and content.endswith('```'):
+        return '\n'.join(content.split('\n')[1:-1])
+
+      # remove `foo`
+      return content.strip('` \n')
+
+  async def cog_check(self, ctx):
+    return await self.bot.is_owner(ctx.author)
+
+  
+  def _add_(self, cog_name: str, cog_path: str):
+    con = sqlite3.connect(SQLITE_FILE_NAME)
+    if self._has_(cog_name):
+      con.close()
+      return "Already Added."
+    con.execute(f"INSERT INTO COGS VALUES ('{cog_name}', '{cog_path}')")
+    con.commit()
+    con.close()
+    return True
+  
+  def _has_(self, name: str):
+    con = sqlite3.connect(SQLITE_FILE_NAME)
+    cog = con.execute(f'SELECT * FROM COGS WHERE ID="{name}"').fetchall()
+    con.close()
+    return True if len(cog) > 0 else False
+
+  def _remove_(self, name: str):
+    con = sqlite3.connect(SQLITE_FILE_NAME)
+    con.execute(f"DELETE from COGS WHERE ID='{name}'")
+    con.commit()
+    con.close()
+    return True
+  
+  @commands.is_owner()
+  @commands.command()
+  async def load(self, ctx: commands.Context, name: str, path: str):
+    self.bot.load_extension(path)
+    embed=disnake.Embed(color=disnake.Color.blurple(), title="Load Extension", description=f"Loaded extension **{name}** from `{path}`.")
+    self._add_(name, path)
+    return await ctx.reply(embed=embed)
+
+  @commands.is_owner()
+  @commands.command()
+  async def unload(self, ctx: commands.Context, name: str):
+    
+    self.bot.unload_extension(data[name])
+    embed=disnake.Embed(color=disnake.Color.blurple(), title="Unload Extension", description=f"Unloaded extension **{name}** from `{data[name]}`.")
+    self._remove_(name)
+    return await ctx.reply(embed=embed)
+    
+  @commands.is_owner()
+  @commands.command(name='reload')
+  async def _reload(self, ctx: commands.Context, name: str):
+    with open('cogs/cogs.json', 'r') as fl:
+      data=json.loads(fl.read())
+      if name in data.keys():
+        self.bot.reload_extension(data[name])
+        embed=disnake.Embed(color=disnake.Color.blurple(), title="Reload Extension", description=f"Reloaded extension **{name}** from `{data[name]}`.")
+        # self._add_(name, data[name])
+        return await ctx.reply(embed=embed)
+
+  @commands.is_owner()
+  @commands.command()
+  async def block(self, ctx: commands.Context, user: disnake.User):
+    self.bot.db.push('blocked_users', user.id)
+    embed=disnake.Embed(title="User Blocked", description=f"**{user.name}#{user.discriminator}** is blocked from using the bot.", color=disnake.Color.blurple())
+    return await ctx.reply(embed=embed)
+
+  @commands.is_owner()
+  @commands.command()
+  async def loaded(self, ctx: commands.Context):
+    description=f"**List of loaded cogs:**\n{', '.join(self.bot.cogs)}"
+    embed=disnake.Embed(color=disnake.Color.blurple(),description=description)
+    return await ctx.reply(embed=embed)
+
+  @commands.Cog.listener()
+  async def on_command_error(self, ctx: commands.Context, exception: commands.CommandError):
+    if isinstance(exception, (NoPrivateMessage, commands.CommandNotFound)):
+      logger.error(exception)
+      return
+    embed = disnake.Embed(color=disnake.Color.red(), title="Oops! Something is wrong",
+    description=f"{exception}")
+    embed.set_footer(text='Contact Shashank#3736 for solution')
+    print(exception.__module__)
+    logger.error(exception)
+    return await ctx.reply(embed=embed)
+
+  @commands.Cog.listener()
+  async def on_load_extension(self, name: str):
+    logger.info(f"Loaded extension from {name}")
+
+def setup(bot: commands.Bot):
+  bot.add_cog(Cogs(bot=bot))
+  
+  @bot.event
+  async def on_load_extension(self, name: str):
+    logger.info(f"Loaded extension from {name}")
