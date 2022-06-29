@@ -24,6 +24,16 @@ class Cogs(commands.Cog):
       except ExtensionAlreadyLoaded:
         pass
 
+  def _get_(self, name):
+    """
+    Get data from a cog name.
+    returns (ID, path)
+    """
+    con = sqlite3.connect(SQLITE_FILE_NAME)
+    data = con.execute(f'SELECT * FROM COGS WHERE ID="{name}"').fetchone() or None
+    con.close()
+    return data
+  
   @commands.command(name='eval', hidden=True)
   @commands.is_owner()
   async def _eval(self, ctx: commands.Context, *, body: str):
@@ -81,6 +91,11 @@ class Cogs(commands.Cog):
   async def cog_check(self, ctx):
     return await self.bot.is_owner(ctx.author)
 
+  def _get_all_(self):
+    con = sqlite3.connect(SQLITE_FILE_NAME)
+    data = con.execute(f'SELECT * FROM COGS').fetchall() or []
+    con.close()
+    return data
   
   def _add_(self, cog_name: str, cog_path: str):
     con = sqlite3.connect(SQLITE_FILE_NAME)
@@ -116,6 +131,9 @@ class Cogs(commands.Cog):
   @commands.is_owner()
   @commands.command()
   async def unload(self, ctx: commands.Context, name: str):
+    data = self._get_(name=name)
+    if data is None:
+      raise disnake.NotFound(f"Module {name} is not found in database.")
     
     self.bot.unload_extension(data[name])
     embed=disnake.Embed(color=disnake.Color.blurple(), title="Unload Extension", description=f"Unloaded extension **{name}** from `{data[name]}`.")
@@ -125,13 +143,14 @@ class Cogs(commands.Cog):
   @commands.is_owner()
   @commands.command(name='reload')
   async def _reload(self, ctx: commands.Context, name: str):
-    with open('cogs/cogs.json', 'r') as fl:
-      data=json.loads(fl.read())
-      if name in data.keys():
+      data=self._get_(name=name)
+      if name is not None:
         self.bot.reload_extension(data[name])
         embed=disnake.Embed(color=disnake.Color.blurple(), title="Reload Extension", description=f"Reloaded extension **{name}** from `{data[name]}`.")
         # self._add_(name, data[name])
         return await ctx.reply(embed=embed)
+      else:
+        return await ctx.reply(f"Module {name} is not loaded.")
 
   @commands.is_owner()
   @commands.command()
@@ -150,22 +169,13 @@ class Cogs(commands.Cog):
   @commands.Cog.listener()
   async def on_command_error(self, ctx: commands.Context, exception: commands.CommandError):
     if isinstance(exception, (NoPrivateMessage, commands.CommandNotFound)):
-      logger.error(exception)
       return
     embed = disnake.Embed(color=disnake.Color.red(), title="Oops! Something is wrong",
     description=f"{exception}")
     embed.set_footer(text='Contact Shashank#3736 for solution')
     print(exception.__module__)
-    logger.error(exception)
     return await ctx.reply(embed=embed)
-
-  @commands.Cog.listener()
-  async def on_load_extension(self, name: str):
-    logger.info(f"Loaded extension from {name}")
 
 def setup(bot: commands.Bot):
   bot.add_cog(Cogs(bot=bot))
   
-  @bot.event
-  async def on_load_extension(self, name: str):
-    logger.info(f"Loaded extension from {name}")
