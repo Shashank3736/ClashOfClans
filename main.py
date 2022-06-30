@@ -21,7 +21,7 @@ if os.environ.get("BOT_TOKEN") is None:
         fl.write(f"BOT_TOKEN={token}")
     load_dotenv('.env')
 
-bot.load_extension('cogs.Cogs')
+bot.load_extension('cogs.owner')
 
 # ----------------------- load plugins ------------------------------ #
 

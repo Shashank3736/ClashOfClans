@@ -12,7 +12,7 @@ class Shashank(commands.Bot):
         super().__init__(
             intents=intents, 
             description="A discord bot made with love by Shashank#3736.", 
-            command_prefix="coc ", test_guilds=os.environ["GUILD_ID"].split(' '),
+            command_prefix="coc ", test_guilds=list(map(int, os.environ["GUILD_ID"].split(' '))),
             sync_commands_debug=True
             )
     
