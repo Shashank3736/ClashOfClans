@@ -16,7 +16,7 @@ class General(commands.Cog):
         """
         Get the ping of the discord bot.
         """
-        return await inter.response.send_message(f"Bot ping is {str(round(self.bot.latency))}ms")
+        return await inter.response.send_message(f"Bot ping is {str(round(self.bot.latency*1000))}ms")
 
 def setup(bot: Shashank):
     bot.add_cog(General(bot))
