@@ -11,7 +11,7 @@ from contextlib import redirect_stdout
 
 SQLITE_FILE_NAME="json.sqlite"
 
-class Cogs(commands.Cog):
+class OwnerOnly(commands.Cog):
   def __init__(self, bot: Shashank):
     self.bot: Shashank = bot
     con = sqlite3.connect(SQLITE_FILE_NAME)
@@ -177,5 +177,5 @@ class Cogs(commands.Cog):
     return await ctx.reply(embed=embed)
 
 def setup(bot: commands.Bot):
-  bot.add_cog(Cogs(bot=bot))
+  bot.add_cog(OwnerOnly(bot=bot))
   
