@@ -135,8 +135,8 @@ class OwnerOnly(commands.Cog):
     if data is None:
       raise disnake.NotFound(f"Module {name} is not found in database.")
     
-    self.bot.unload_extension(data[name])
-    embed=disnake.Embed(color=disnake.Color.blurple(), title="Unload Extension", description=f"Unloaded extension **{name}** from `{data[name]}`.")
+    self.bot.unload_extension(data[1])
+    embed=disnake.Embed(color=disnake.Color.blurple(), title="Unload Extension", description=f"Unloaded extension **{name}** from `{data[1]}`.")
     self._remove_(name)
     return await ctx.reply(embed=embed)
     
@@ -144,9 +144,9 @@ class OwnerOnly(commands.Cog):
   @commands.command(name='reload')
   async def _reload(self, ctx: commands.Context, name: str):
       data=self._get_(name=name)
-      if name is not None:
-        self.bot.reload_extension(data[name])
-        embed=disnake.Embed(color=disnake.Color.blurple(), title="Reload Extension", description=f"Reloaded extension **{name}** from `{data[name]}`.")
+      if data is not None:
+        self.bot.reload_extension(data[1])
+        embed=disnake.Embed(color=disnake.Color.blurple(), title="Reload Extension", description=f"Reloaded extension **{name}** from `{data[1]}`.")
         # self._add_(name, data[name])
         return await ctx.reply(embed=embed)
       else:
