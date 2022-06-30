@@ -18,5 +18,5 @@ class Shashank(commands.Bot):
     
     async def on_ready(self):
         print(f"Logged in as {self.user.name} on discord.")
-        print(f"Currently I m in {str(self.guilds.count())} server(s).")
+        print(f"Currently I m in {str(len(self.guilds))} server(s).")
     
