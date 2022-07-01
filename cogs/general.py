@@ -1,5 +1,7 @@
 from disnake import ApplicationCommandInteraction
+import disnake
 from disnake.ext import commands
+import json
 
 from core.bot import Shashank
 
@@ -17,6 +19,20 @@ class General(commands.Cog):
         Get the ping of the discord bot.
         """
         return await inter.response.send_message(f"Bot ping is {str(round(self.bot.latency*1000))}ms")
+    
+    @commands.slash_command()
+    async def about(self, inter: ApplicationCommandInteraction):
+        """
+        Information about the bot.
+        """
+        with open('bot_info.json') as f:
+            data = json.load(f)
+        
+        embed = disnake.Embed(
+            title=f"About {self.bot.user.name} bot", 
+            description=data['info'], 
+            color=disnake.Color.blurple()).add_field('Creator', data['creator']).add_field('Version', data['version'])
+        return await inter.response.send_message(embed=embed)
 
 def setup(bot: Shashank):
     bot.add_cog(General(bot))
