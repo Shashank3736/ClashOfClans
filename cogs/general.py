@@ -1,4 +1,4 @@
-from disnake import ApplicationCommandInteraction
+from disnake import ApplicationCommandInteraction, Interaction
 import disnake
 from disnake.ext import commands
 import json
@@ -20,6 +20,7 @@ class General(commands.Cog):
         """
         return await inter.response.send_message(f"Bot ping is {str(round(self.bot.latency*1000))}ms")
     
+    @commands.cooldown(1, 5.0)
     @commands.slash_command()
     async def about(self, inter: ApplicationCommandInteraction):
         """
@@ -34,6 +35,10 @@ class General(commands.Cog):
             color=disnake.Color.blurple()).add_field('Creator', data['creator']).add_field('Version', data['version'])
         embed.add_field('Uptime', self.bot.uptime())
         return await inter.response.send_message(embed=embed)
+
+    @about.error
+    async def about_error(self, inter: Interaction, error):
+        return await inter.response.send_message(error, ephemeral=True)
 
 def setup(bot: Shashank):
     bot.add_cog(General(bot))
