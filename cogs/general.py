@@ -32,6 +32,7 @@ class General(commands.Cog):
             title=f"About {self.bot.user.name} bot", 
             description=data['info'], 
             color=disnake.Color.blurple()).add_field('Creator', data['creator']).add_field('Version', data['version'])
+        embed.add_field('Uptime', self.bot.uptime())
         return await inter.response.send_message(embed=embed)
 
 def setup(bot: Shashank):
