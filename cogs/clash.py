@@ -19,17 +19,17 @@ class ClashOfClans(commands.Cog):
         """
         Get rushed unit of a player.
         """
-        heroes: list[coc.Hero] = player.heroes()
+        heroes: list[coc.Hero] = player.heroes
         hero_rush_percent = []
 
         for hero in heroes:
             hero_name = hero.name
             hero_lvl = hero.level
             hero_req_lvl = hero.get_max_level_for_townhall(player.town_hall - 1)
-            if hero_lvl < hero_req_lvl:
+            if hero_lvl < hero_req_lvl and hero._is_home_village:
                 hero_rush_percent.append((hero_name, hero.level, hero_req_lvl))
         
-        troops: list[coc.Troop] = player.home_troops()
+        troops: list[coc.Troop] = player.home_troops
         troop_rush_percent = []
 
         for troop in troops:
@@ -37,7 +37,7 @@ class ClashOfClans(commands.Cog):
             if troop.level < troop_req_lvl:
                 troop_rush_percent.append((troop.name, troop.level, troop_req_lvl))
 
-        spells: list[coc.Spell] = player.spells()
+        spells: list[coc.Spell] = player.spells
         spell_rush_percent = []
 
         for spell in spells:
@@ -53,11 +53,13 @@ class ClashOfClans(commands.Cog):
         """
         rushed_units = self.get_rushed_unit(player)
         rushed_unit = rushed_units[0] + rushed_units[1] + rushed_units[2]
-        total_unit = len(rushed_unit)
         current_data = 0
+        total_unit = len(player.home_troops) + len(player.spells) + len([h for h in player.heroes if h.is_home_base])
+
+        print(rushed_unit, rushed_units)
 
         for unit in rushed_unit:
-            current_data += unit[1]/unit[2]
+            current_data += 1 - unit[1]/unit[2]
         
         return (current_data/total_unit)*100
 
@@ -71,7 +73,7 @@ class ClashOfClans(commands.Cog):
         pass
 
     @search.sub_command(name='player')
-    async def search_player(self, inter: disnake.Interaction, tag: str):
+    async def search_player(self, inter, tag: str):
         """
         Get information about a clash of clans player with their tag.
 
